@@ -3,3 +3,5 @@
 venv/
 *png
 *pkl
+*json
+*.tsv
