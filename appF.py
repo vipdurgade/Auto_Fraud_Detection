@@ -88,21 +88,18 @@ st.markdown('<h1 class="main-header">🔍 Fraud Detection System</h1>', unsafe_a
 
 # Function to load model
 @st.cache_resource
-def load_model(model_path=None):
+def load_model():
     """Load the CatBoost model from pickle file"""
-    if model_path is None:
-        model_path = 'fraud_detection_catboost_model.pkl'
-    
     try:
-        with open(model_path, 'rb') as f:
+        with open('fraud_detection_catboost_model.pkl', 'rb') as f:
             model = pickle.load(f)
-        return model, None
+        return model
     except FileNotFoundError:
-        error_msg = f"❌ Model file '{model_path}' not found."
-        return None, error_msg
+        st.error("❌ Model file 'fraud_detection_catboost_model.pkl' not found. Please ensure the file is in the same directory as this script.")
+        return None
     except Exception as e:
-        error_msg = f"❌ Error loading model: {str(e)}"
-        return None, error_msg
+        st.error(f"❌ Error loading model: {str(e)}")
+        return None
 
 # Function to validate data
 def validate_data(df):
@@ -160,74 +157,13 @@ def to_excel(df):
 
 # Main application logic
 def main():
-    # Model loading section
-    st.markdown("## 🤖 Model Configuration")
+    # Load model
+    model = load_model()
     
-    # Option 1: Upload model file
-    st.markdown("### Option 1: Upload Model File")
-    uploaded_model = st.file_uploader(
-        "Upload your fraud detection model (.pkl file)",
-        type=['pkl'],
-        help="Upload the fraud_detection_catboost_model.pkl file"
-    )
-    
-    # Option 2: Use local file
-    st.markdown("### Option 2: Use Local File")
-    model_path = st.text_input(
-        "Enter model file path",
-        value="fraud_detection_catboost_model.pkl",
-        help="Enter the path to your model file"
-    )
-    
-    use_uploaded = st.radio(
-        "Choose model source:",
-        ["Upload model file", "Use local file path"],
-        index=0
-    )
-    
-    model = None
-    model_error = None
-    
-    if use_uploaded == "Upload model file" and uploaded_model is not None:
-        try:
-            # Save uploaded file temporarily and load it
-            import tempfile
-            import os
-            
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.pkl') as tmp_file:
-                tmp_file.write(uploaded_model.read())
-                tmp_file_path = tmp_file.name
-            
-            model, model_error = load_model(tmp_file_path)
-            
-            # Clean up temporary file
-            os.unlink(tmp_file_path)
-            
-            if model is not None:
-                st.success("✅ Model loaded successfully from uploaded file!")
-            else:
-                st.error(model_error)
-                
-        except Exception as e:
-            st.error(f"❌ Error processing uploaded model: {str(e)}")
-    
-    elif use_uploaded == "Use local file path":
-        if st.button("🔄 Load Model from Path"):
-            model, model_error = load_model(model_path)
-            
-            if model is not None:
-                st.success("✅ Model loaded successfully from local path!")
-            else:
-                st.error(model_error)
-                st.info("💡 **Solutions:**\n"
-                       "1. Upload your model file using the file uploader above\n"
-                       "2. Place 'fraud_detection_catboost_model.pkl' in the same directory as this script\n"
-                       "3. Provide the correct path to your model file")
-    
-    # Only proceed if model is loaded
     if model is None:
-        st.warning("⚠️ Please load a model before proceeding with predictions.")
         st.stop()
+    
+    st.success("✅ Model loaded successfully!")
     
     # File upload
     st.markdown("## 📁 Upload Your Data")
