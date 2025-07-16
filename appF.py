@@ -81,7 +81,22 @@ for feature in required_features:
     st.sidebar.markdown(f"• `{feature}`")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("*All features must be in numerical format*")
+st.sidebar.markdown("*Categorical features will be automatically converted to numerical format*")
+
+st.sidebar.markdown("### 🔄 Data Processing")
+st.sidebar.markdown("""
+**Categorical Features**: Will be automatically encoded using factorize()
+- `incident_severity`
+- `Pin_code`
+- `insured_hobbies`
+- `property_damage`
+- `incident_city`
+
+**Numerical Features**: Used as-is
+- `vehicle_claim`
+- `incident_hour_of_the_day`
+- `insured_zip`
+""")
 
 # Main content
 st.markdown('<h1 class="main-header">🔍 Fraud Detection System</h1>', unsafe_allow_html=True)
@@ -112,16 +127,43 @@ def validate_data(df):
     if missing_features:
         return False, missing_features
     
-    # Check for non-numeric data
-    non_numeric_cols = []
-    for feature in required_features:
-        if not pd.api.types.is_numeric_dtype(df[feature]):
-            non_numeric_cols.append(feature)
-    
-    if non_numeric_cols:
-        return False, f"Non-numeric columns found: {non_numeric_cols}"
-    
     return True, None
+
+# Function to preprocess data (convert categorical to numerical)
+def preprocess_data(df):
+    """Convert categorical features to numerical using factorize (same as training)"""
+    processed_df = df.copy()
+    
+    # Define categorical features that need encoding
+    categorical_features = [
+        'incident_severity',
+        'Pin_code', 
+        'insured_hobbies',
+        'property_damage',
+        'incident_city'
+    ]
+    
+    # Define numerical features that should remain as-is
+    numerical_features = [
+        'vehicle_claim',
+        'incident_hour_of_the_day',
+        'insured_zip'
+    ]
+    
+    # Convert categorical features using factorize
+    for feature in categorical_features:
+        if feature in processed_df.columns:
+            # Convert to string first to handle any data type issues
+            processed_df[feature] = processed_df[feature].astype(str)
+            # Use factorize to convert to numerical
+            processed_df[feature], _ = pd.factorize(processed_df[feature])
+    
+    # Ensure numerical features are numeric
+    for feature in numerical_features:
+        if feature in processed_df.columns:
+            processed_df[feature] = pd.to_numeric(processed_df[feature], errors='coerce')
+    
+    return processed_df
 
 # Function to make predictions
 def make_predictions(model, df):
@@ -157,7 +199,7 @@ def to_excel(df):
 
 # Main application logic
 def main():
-    # Load model
+    # Load model automatically
     model = load_model()
     
     if model is None:
@@ -168,15 +210,18 @@ def main():
     # File upload
     st.markdown("## 📁 Upload Your Data")
     uploaded_file = st.file_uploader(
-        "Choose an Excel file",
-        type=['xlsx', 'xls'],
-        help="Upload an Excel file containing all required features in numerical format"
+        "Choose an Excel or CSV file",
+        type=['xlsx', 'xls', 'csv'],
+        help="Upload a file containing all required features (categorical data will be automatically converted)"
     )
     
     if uploaded_file is not None:
         try:
-            # Read the Excel file
-            df = pd.read_excel(uploaded_file)
+            # Read the file (Excel or CSV)
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
             
             # Display basic info about the uploaded file
             st.markdown("### 📊 Data Overview")
@@ -189,8 +234,8 @@ def main():
             with col3:
                 st.metric("File Size", f"{uploaded_file.size / 1024:.1f} KB")
             
-            # Show first few rows
-            st.markdown("### 🔍 Data Preview")
+            # Show first few rows of original data
+            st.markdown("### 🔍 Original Data Preview")
             st.dataframe(df.head(), use_container_width=True)
             
             # Validate data
@@ -205,12 +250,42 @@ def main():
             
             st.success("✅ Data validation passed!")
             
+            # Preprocess data (convert categorical to numerical)
+            st.markdown("### 🔄 Data Processing")
+            with st.spinner("Converting categorical data to numerical format..."):
+                processed_df = preprocess_data(df)
+            
+            # Show processed data preview
+            st.markdown("### 📋 Processed Data Preview")
+            st.info("Categorical features have been converted to numerical format using factorize()")
+            
+            # Show comparison of original vs processed for categorical columns
+            categorical_features = ['incident_severity', 'Pin_code', 'insured_hobbies', 'property_damage', 'incident_city']
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**Original (Categorical):**")
+                original_sample = df[categorical_features].head(3)
+                st.dataframe(original_sample, use_container_width=True)
+            
+            with col2:
+                st.markdown("**Processed (Numerical):**")
+                processed_sample = processed_df[categorical_features].head(3)
+                st.dataframe(processed_sample, use_container_width=True)
+            
+            st.success("✅ Data preprocessing completed!")
+            
             # Make predictions button
             if st.button("🚀 Run Fraud Detection", type="primary"):
                 with st.spinner("Analyzing data for fraudulent patterns..."):
-                    results_df = make_predictions(model, df)
+                    results_df = make_predictions(model, processed_df)
                 
                 if results_df is not None:
+                    # Add original categorical data back to results for better readability
+                    for feature in categorical_features:
+                        if feature in df.columns:
+                            results_df[f'{feature}_original'] = df[feature]
+                    
                     # Display results
                     st.markdown("### 📈 Prediction Results")
                     
@@ -297,7 +372,7 @@ def main():
         
         except Exception as e:
             st.error(f"❌ Error processing file: {str(e)}")
-            st.info("Please ensure your file is a valid Excel file with all required features in numerical format.")
+            st.info("Please ensure your file is a valid Excel/CSV file with all required features.")
 
 if __name__ == "__main__":
     main()
