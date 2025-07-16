@@ -72,6 +72,7 @@ Several models were experimented with, including:
 * **XGBoost** (final model)
 * **Joblib** (for model serialization)
 * **Streamlit** (for app deployment)
+https://ivfrauddetection.streamlit.app/
 
 ---
 
