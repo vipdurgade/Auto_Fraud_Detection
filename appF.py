@@ -13,6 +13,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Initialize session state
+if 'results_df' not in st.session_state:
+    st.session_state.results_df = None
+if 'processed_df' not in st.session_state:
+    st.session_state.processed_df = None
+
 # Custom CSS for better styling
 st.markdown("""
 <style>
@@ -254,6 +260,7 @@ def main():
             st.markdown("### 🔄 Data Processing")
             with st.spinner("Converting categorical data to numerical format..."):
                 processed_df = preprocess_data(df)
+                st.session_state.processed_df = processed_df
             
             # Show processed data preview
             st.markdown("### 📋 Processed Data Preview")
@@ -286,89 +293,101 @@ def main():
                         if feature in df.columns:
                             results_df[f'{feature}_original'] = df[feature]
                     
-                    # Display results
-                    st.markdown("### 📈 Prediction Results")
+                    # Store results in session state
+                    st.session_state.results_df = results_df
                     
-                    # Summary statistics
-                    fraud_count = (results_df['is_fraudulent'] == 1).sum()
-                    total_count = len(results_df)
-                    fraud_percentage = (fraud_count / total_count) * 100
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("Total Analyzed", total_count)
-                    with col2:
-                        st.metric("Fraudulent Cases", fraud_count)
-                    with col3:
-                        st.metric("Fraud Rate", f"{fraud_percentage:.1f}%")
-                    with col4:
-                        avg_fraud_prob = results_df['fraud_probability'].mean()
-                        st.metric("Avg Fraud Probability", f"{avg_fraud_prob:.3f}")
-                    
-                    # Risk distribution
-                    st.markdown("### 🎯 Risk Distribution")
-                    risk_dist = results_df['risk_level'].value_counts()
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.metric("High Risk", risk_dist.get('High', 0), delta_color="inverse")
-                    with col2:
-                        st.metric("Medium Risk", risk_dist.get('Medium', 0), delta_color="off")
-                    with col3:
-                        st.metric("Low Risk", risk_dist.get('Low', 0), delta_color="normal")
-                    
-                    # Display results table
-                    st.markdown("### 📋 Detailed Results")
-                    
-                    # Add filters for better user experience
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        filter_risk = st.selectbox(
-                            "Filter by Risk Level",
-                            options=['All', 'High', 'Medium', 'Low'],
-                            index=0
-                        )
-                    with col2:
-                        filter_fraud = st.selectbox(
-                            "Filter by Fraud Status",
-                            options=['All', 'Fraudulent', 'Non-Fraudulent'],
-                            index=0
-                        )
-                    
-                    # Apply filters
-                    filtered_df = results_df.copy()
-                    if filter_risk != 'All':
-                        filtered_df = filtered_df[filtered_df['risk_level'] == filter_risk]
-                    if filter_fraud == 'Fraudulent':
-                        filtered_df = filtered_df[filtered_df['is_fraudulent'] == 1]
-                    elif filter_fraud == 'Non-Fraudulent':
-                        filtered_df = filtered_df[filtered_df['is_fraudulent'] == 0]
-                    
-                    # Display filtered results
-                    st.dataframe(
-                        filtered_df.style.format({
-                            'fraud_probability': '{:.3f}'
-                        }).background_gradient(subset=['fraud_probability'], cmap='RdYlBu_r'),
-                        use_container_width=True
+                    st.success("✅ Fraud detection completed!")
+            
+            # Display results if they exist in session state
+            if st.session_state.results_df is not None:
+                results_df = st.session_state.results_df
+                
+                # Display results
+                st.markdown("### 📈 Prediction Results")
+                
+                # Summary statistics
+                fraud_count = (results_df['is_fraudulent'] == 1).sum()
+                total_count = len(results_df)
+                fraud_percentage = (fraud_count / total_count) * 100
+                
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("Total Analyzed", total_count)
+                with col2:
+                    st.metric("Fraudulent Cases", fraud_count)
+                with col3:
+                    st.metric("Fraud Rate", f"{fraud_percentage:.1f}%")
+                with col4:
+                    avg_fraud_prob = results_df['fraud_probability'].mean()
+                    st.metric("Avg Fraud Probability", f"{avg_fraud_prob:.3f}")
+                
+                # Risk distribution
+                st.markdown("### 🎯 Risk Distribution")
+                risk_dist = results_df['risk_level'].value_counts()
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("High Risk", risk_dist.get('High', 0), delta_color="inverse")
+                with col2:
+                    st.metric("Medium Risk", risk_dist.get('Medium', 0), delta_color="off")
+                with col3:
+                    st.metric("Low Risk", risk_dist.get('Low', 0), delta_color="normal")
+                
+                # Display results table with filters
+                st.markdown("### 📋 Detailed Results")
+                
+                # Add filters for better user experience
+                col1, col2 = st.columns(2)
+                with col1:
+                    filter_risk = st.selectbox(
+                        "Filter by Risk Level",
+                        options=['All', 'High', 'Medium', 'Low'],
+                        index=0,
+                        key="risk_filter"
                     )
-                    
-                    # Download button
-                    st.markdown("### 💾 Download Results")
-                    excel_data = to_excel(results_df)
-                    
-                    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    filename = f"fraud_detection_results_{current_time}.xlsx"
-                    
-                    st.download_button(
-                        label="📥 Download Results as Excel",
-                        data=excel_data,
-                        file_name=filename,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        type="primary"
+                with col2:
+                    filter_fraud = st.selectbox(
+                        "Filter by Fraud Status",
+                        options=['All', 'Fraudulent', 'Non-Fraudulent'],
+                        index=0,
+                        key="fraud_filter"
                     )
-                    
-                    st.success(f"✅ Analysis complete! {fraud_count} potentially fraudulent cases detected out of {total_count} records.")
+                
+                # Apply filters
+                filtered_df = results_df.copy()
+                if filter_risk != 'All':
+                    filtered_df = filtered_df[filtered_df['risk_level'] == filter_risk]
+                if filter_fraud == 'Fraudulent':
+                    filtered_df = filtered_df[filtered_df['is_fraudulent'] == 1]
+                elif filter_fraud == 'Non-Fraudulent':
+                    filtered_df = filtered_df[filtered_df['is_fraudulent'] == 0]
+                
+                # Display filtered results
+                st.dataframe(
+                    filtered_df.style.format({
+                        'fraud_probability': '{:.3f}'
+                    }).background_gradient(subset=['fraud_probability'], cmap='RdYlBu_r'),
+                    use_container_width=True
+                )
+                
+                # Show filtered count
+                st.info(f"Showing {len(filtered_df)} of {len(results_df)} records")
+                
+                # Download button
+                st.markdown("### 💾 Download Results")
+                excel_data = to_excel(results_df)
+                
+                current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"fraud_detection_results_{current_time}.xlsx"
+                
+                st.download_button(
+                    label="📥 Download Results as Excel",
+                    data=excel_data,
+                    file_name=filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="primary"
+                )
         
         except Exception as e:
             st.error(f"❌ Error processing file: {str(e)}")
