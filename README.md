@@ -64,7 +64,7 @@ Several models were experimented with, including:
   * `policy_csl`
 
 ## 🔍 Predict Fraud 
-*click on the link below*
+*click on the link*
 https://ivfrauddetection.streamlit.app/
 ---
 
