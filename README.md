@@ -63,6 +63,9 @@ Several models were experimented with, including:
   * `collision_type`
   * `policy_csl`
 
+## 🔍 Predict Fraud 
+*click on the link below*
+https://ivfrauddetection.streamlit.app/
 ---
 
 ## 🧰 Tech Stack
@@ -72,16 +75,13 @@ Several models were experimented with, including:
 * **XGBoost** (final model)
 * **Joblib** (for model serialization)
 * **Streamlit** (for app deployment)
-https://ivfrauddetection.streamlit.app/
+
 
 ---
 
 ## 🚀 How to Run
 
 ```bash
-#Predict Fraud
-https://ivfrauddetection.streamlit.app/
-
 # Clone the repository
 git clone https://github.com/your-username/insurance-fraud-detection.git
 cd insurance-fraud-detection
