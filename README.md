@@ -78,6 +78,9 @@ Several models were experimented with, including:
 ## 🚀 How to Run
 
 ```bash
+#Predict Fraud
+https://ivfrauddetection.streamlit.app/
+
 # Clone the repository
 git clone https://github.com/your-username/insurance-fraud-detection.git
 cd insurance-fraud-detection
